@@ -64,9 +64,7 @@ def _severity_min(severity: str | None) -> int:
     return {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}[severity]
 
 
-async def scan_packages(
-    reqs: list, *, semaphore: int = 5
-) -> list[PackageResult]:
+async def scan_packages(reqs: list, *, semaphore: int = 5) -> list[PackageResult]:
     """Scan a list of (name, version) tuples concurrently."""
     sem = asyncio.Semaphore(semaphore)
     results: list[PackageResult] = []
@@ -91,9 +89,7 @@ def _filter_results(
         vulns = [v for v in r.vulnerabilities if v.severity_rank <= min_severity]
         if vulns:
             filtered.append(
-                PackageResult(
-                    name=r.name, version=r.version, vulnerabilities=vulns
-                )
+                PackageResult(name=r.name, version=r.version, vulnerabilities=vulns)
             )
     return filtered
 

@@ -59,8 +59,10 @@ def _cvss_base_score(vector: str) -> float | None:
     ac = {"L": 0.77, "H": 0.44}.get(parts.get("AC", ""), 0.44)
     # Privileges Required (depends on Scope, use Unchanged default)
     sc = parts.get("S", "U")
-    pr_map = {"U": {"N": 0.85, "L": 0.62, "H": 0.27},
-              "C": {"N": 0.85, "L": 0.68, "H": 0.50}}
+    pr_map = {
+        "U": {"N": 0.85, "L": 0.62, "H": 0.27},
+        "C": {"N": 0.85, "L": 0.68, "H": 0.50},
+    }
     pr = pr_map.get(sc, pr_map["U"]).get(parts.get("PR", ""), 0.85)
     # User Interaction
     ui = {"N": 0.85, "R": 0.62}.get(parts.get("UI", ""), 0.62)
@@ -158,9 +160,7 @@ def _extract_severity(vuln_data: dict[str, Any]) -> str:
         if isinstance(db_specific, dict):
             gh_sev = db_specific.get("severity", "")
             if gh_sev.upper() in severity_values:
-                rank = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}[
-                    gh_sev.upper()
-                ]
+                rank = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}[gh_sev.upper()]
                 if rank < best_rank:
                     best = gh_sev.upper()
                     best_rank = rank

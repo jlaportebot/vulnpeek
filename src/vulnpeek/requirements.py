@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Iterator
 
 # Matches: package==1.2.3, package>=1.0,<2.0, package~=1.2
 # Handles extras like package[extra]==1.0
