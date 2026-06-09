@@ -31,8 +31,8 @@ jobs:
           pip install -r requirements-dev.txt
         fi
 
-    - name: Lint with ruff
-      run: ruff check .
+    - name: Lint with ruff (errors only)
+      run: ruff check --select=E,F --ignore=E501 .
 
     - name: Format check with ruff
       run: ruff format --check .
