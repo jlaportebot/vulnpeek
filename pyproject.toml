@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Lightweight CLI to scan Python dependencies for known vulnerabilities via the OSV API"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 authors = [{ name = "Jonathan Laporte" }]
 keywords = ["security", "vulnerability", "scanner", "osv", "dependencies", "python"]
 classifiers = [
@@ -17,6 +17,9 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Security",
     "Topic :: Software Development :: Quality Assurance",
 ]
@@ -26,7 +29,7 @@ dependencies = ["httpx>=0.24", "rich>=13.0"]
 vulnpeek = "vulnpeek.cli:main"
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0", "pytest-httpx>=0.21", "respx>=0.20", "ruff>=0.1"]
+dev = ["pytest>=7.0", "pytest-httpx>=0.21", "respx>=0.20", "ruff>=0.1", "ty>=0.0.51"]
 
 [project.urls]
 Homepage = "https://github.com/jlaportebot/vulnpeek"

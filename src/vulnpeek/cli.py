@@ -15,7 +15,12 @@ from rich.text import Text
 
 from vulnpeek import __version__
 from vulnpeek.osv import PackageResult, query_package
-from vulnpeek.requirements import parse_requirements, parse_requirements_file
+from vulnpeek.requirements import (
+    parse_requirements,
+    parse_requirements_file,
+    parse_pyproject_toml_file,
+    parse_uv_lock_file,
+)
 
 SEVERITY_COLORS = {
     "CRITICAL": "bold red",
@@ -35,7 +40,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "target",
         nargs="?",
         default="requirements.txt",
-        help="Requirements file path (default: requirements.txt) or 'package==version'",
+        help="Requirements file path (requirements.txt, pyproject.toml, uv.lock) or 'package==version'",
     )
     parser.add_argument(
         "--format",
@@ -48,6 +53,12 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=["CRITICAL", "HIGH", "MEDIUM", "LOW"],
         default=None,
         help="Minimum severity to report (default: show all)",
+    )
+    parser.add_argument(
+        "--include-optional",
+        action="append",
+        default=[],
+        help="Optional dependency groups to include for pyproject.toml (e.g., --include-optional dev --include-optional test)",
     )
     parser.add_argument(
         "--version",
@@ -167,15 +178,25 @@ def main(argv: list[str] | None = None) -> int:
 
     # Determine if target is a file or a single package spec
     target = args.target
-    if Path(target).is_file():
-        reqs = parse_requirements_file(Path(target))
+    target_path = Path(target)
+
+    if target_path.is_file():
+        suffix = target_path.suffix.lower()
+        if suffix == ".toml" or target_path.name == "pyproject.toml":
+            reqs = parse_pyproject_toml_file(
+                target_path, include_optional=args.include_optional or None
+            )
+        elif suffix == ".lock" or target_path.name == "uv.lock":
+            reqs = parse_uv_lock_file(target_path)
+        else:
+            reqs = parse_requirements_file(target_path)
     elif "==" in target or ">=" in target:
         # Single package spec like "requests==2.28.0"
         reqs = parse_requirements(target)
     else:
         # Try as file, fallback to error
         try:
-            reqs = parse_requirements_file(Path(target))
+            reqs = parse_requirements_file(target_path)
         except FileNotFoundError:
             console.print(f"[red]Error:[/red] File '{target}' not found")
             return 1
@@ -213,7 +234,8 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"{r.name}=={r.version} {v.id} [{v.severity}] {fix}")
         count = len(results)
     else:
-        count = _print_table(results, console)
+        _print_table(results, console)
+        count = len(results)
 
     return 1 if count > 0 else 0
 

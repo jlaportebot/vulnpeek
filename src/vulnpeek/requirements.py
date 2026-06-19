@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import tomllib
 from pathlib import Path
 
 # Matches: package==1.2.3, package>=1.0,<2.0, package~=1.2
@@ -71,3 +72,90 @@ def parse_requirements(text: str) -> list[Requirement]:
 def parse_requirements_file(path: Path) -> list[Requirement]:
     """Parse a requirements file by path."""
     return parse_requirements(path.read_text(encoding="utf-8"))
+
+
+def parse_pyproject_toml(
+    content: str, *, include_optional: list[str] | None = None
+) -> list[Requirement]:
+    """Parse a pyproject.toml string (PEP 621) into Requirement objects.
+
+    Args:
+        content: The pyproject.toml file content as a string.
+        include_optional: Optional list of optional dependency group names
+            (e.g., ["dev", "test"]) to include in addition to main dependencies.
+
+    Returns:
+        List of Requirement objects with pinned versions extracted where possible.
+    """
+    try:
+        data = tomllib.loads(content)
+    except tomllib.TOMLDecodeError:
+        return []
+
+    project = data.get("project", {})
+    if not project:
+        return []
+
+    results: list[Requirement] = []
+
+    # Parse main dependencies
+    for dep in project.get("dependencies", []):
+        m = _REQ_RE.match(dep)
+        if m:
+            name = m.group("name").strip()
+            specifier = m.group("specifier")
+            version = _extract_version(specifier)
+            results.append(Requirement(name=name, version=version, line=dep))
+
+    # Parse optional dependencies
+    if include_optional:
+        optional_deps = project.get("optional-dependencies", {})
+        for group in include_optional:
+            for dep in optional_deps.get(group, []):
+                m = _REQ_RE.match(dep)
+                if m:
+                    name = m.group("name").strip()
+                    specifier = m.group("specifier")
+                    version = _extract_version(specifier)
+                    results.append(Requirement(name=name, version=version, line=dep))
+
+    return results
+
+
+def parse_pyproject_toml_file(
+    path: Path, *, include_optional: list[str] | None = None
+) -> list[Requirement]:
+    """Parse a pyproject.toml file by path."""
+    return parse_pyproject_toml(
+        path.read_text(encoding="utf-8"), include_optional=include_optional
+    )
+
+
+def parse_uv_lock(content: str) -> list[Requirement]:
+    """Parse a uv.lock file into Requirement objects.
+
+    Args:
+        content: The uv.lock file content as a string.
+
+    Returns:
+        List of Requirement objects with exact versions from the lock file.
+    """
+    try:
+        data = tomllib.loads(content)
+    except tomllib.TOMLDecodeError:
+        return []
+
+    results: list[Requirement] = []
+    for pkg in data.get("package", []):
+        name = pkg.get("name", "")
+        version = pkg.get("version", "")
+        if name and version:
+            results.append(
+                Requirement(name=name, version=version, line=f"{name}=={version}")
+            )
+    return results
+
+
+def parse_uv_lock_file(path: Path) -> list[Requirement]:
+    """Parse a uv.lock file by path."""
+    return parse_uv_lock(path.read_text(encoding="utf-8"))
