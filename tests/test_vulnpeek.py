@@ -151,3 +151,90 @@ def test_extract_severity_unknown_when_no_data():
 
     data = {"id": "TEST", "affected": []}
     assert _extract_severity(data) == "UNKNOWN"
+
+
+def test_parse_pyproject_toml_pep621():
+    from vulnpeek.requirements import parse_pyproject_toml
+
+    content = """
+[project]
+name = "my-project"
+version = "1.0.0"
+dependencies = [
+    "requests==2.28.0",
+    "click>=8.0,<9.0",
+    "rich==13.0.0",
+]
+"""
+    reqs = parse_pyproject_toml(content)
+    assert len(reqs) == 3
+    assert reqs[0].name == "requests"
+    assert reqs[0].version == "2.28.0"
+    assert reqs[1].name == "click"
+    assert reqs[1].version is None  # not pinned
+    assert reqs[2].name == "rich"
+    assert reqs[2].version == "13.0.0"
+
+
+def test_parse_pyproject_toml_optional_dependencies():
+    from vulnpeek.requirements import parse_pyproject_toml
+
+    content = """
+[project]
+name = "my-project"
+dependencies = ["requests==2.28.0"]
+
+[project.optional-dependencies]
+dev = ["pytest==7.0.0", "ruff>=0.1"]
+test = ["pytest-cov==4.0.0"]
+"""
+    reqs = parse_pyproject_toml(content, include_optional=["dev", "test"])
+    assert len(reqs) == 4
+    names = {r.name for r in reqs}
+    assert names == {"requests", "pytest", "ruff", "pytest-cov"}
+    # Check versions
+    req_map = {r.name: r.version for r in reqs}
+    assert req_map["requests"] == "2.28.0"
+    assert req_map["pytest"] == "7.0.0"
+    assert req_map["pytest-cov"] == "4.0.0"
+    assert req_map["ruff"] is None
+
+
+def test_parse_pyproject_toml_no_project():
+    from vulnpeek.requirements import parse_pyproject_toml
+
+    content = """
+[build-system]
+requires = ["setuptools>=61.0"]
+"""
+    reqs = parse_pyproject_toml(content)
+    assert len(reqs) == 0
+
+
+def test_parse_uv_lock():
+    from vulnpeek.requirements import parse_uv_lock
+
+    content = """
+[[package]]
+name = "requests"
+version = "2.28.0"
+source = "pypi"
+
+[[package]]
+name = "click"
+version = "8.1.0"
+source = "pypi"
+
+[[package]]
+name = "certifi"
+version = "2023.01.01"
+source = "registry+https://github.com/pypa/pypi"
+"""
+    reqs = parse_uv_lock(content)
+    assert len(reqs) == 3
+    assert reqs[0].name == "requests"
+    assert reqs[0].version == "2.28.0"
+    assert reqs[1].name == "click"
+    assert reqs[1].version == "8.1.0"
+    assert reqs[2].name == "certifi"
+    assert reqs[2].version == "2023.01.01"
